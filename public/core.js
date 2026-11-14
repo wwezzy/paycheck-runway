@@ -27,3 +27,12 @@ export function forecast(balance,items,start,days=30,delay=0){
  let total=cents(balance);const safe=scheduledItems(items,start,days,delay);
  return Array.from({length:days},(_,i)=>{const date=addDays(start,i);const events=safe.filter(x=>x.date===date);total+=events.reduce((s,x)=>s+cents(x.amount)*(x.type==='income'?1:-1),0);return {date,balance:total/100,events}});
 }
+
+// Calendar-only values stay ISO internally; formatting never shifts them across time zones.
+export function localToday(now=new Date()){
+ return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+}
+export function displayDate(day){
+ if(!validDate(day))return 'Choose a date';
+ return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(day+'T00:00:00Z'));
+}
