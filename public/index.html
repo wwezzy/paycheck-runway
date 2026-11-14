@@ -14,6 +14,7 @@
 <div class="layout">
 <section class="panel plan-panel">
 <div class="section-heading"><span class="step">01</span><div><h2>Your starting balance</h2><p>Enter available cash, not your credit limit.</p></div></div>
+<p id="savedPlanNotice" class="saved-plan-notice" role="status" hidden></p>
 <div class="two"><label>Available money ($)<input id="balance" type="number" step="0.01" placeholder="Enter your balance" inputmode="decimal"></label><label>Starting date<input id="start" type="date"></label></div>
 <div class="section-heading manual-heading"><span class="step">02</span><div><h2>Add a bill or income</h2><p>Add one payment at a time. Include its amount and the day it is due.</p></div></div>
 <form id="manual"><label for="label">Description</label><input id="label" placeholder="Rent, paycheck, insurance…" required maxlength="80"><div class="three"><label>Type<select id="type"><option value="expense">Expense</option><option value="income">Income</option></select></label><label>Amount ($)<input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" inputmode="decimal" required></label><label>Date<input id="date" type="date" required></label></div><button type="submit" class="add-item">Add item <span aria-hidden="true">+</span></button></form><a class="result-link" href="#result">See my result ↓</a>
@@ -27,7 +28,7 @@
 <p class="coverage-note">Not a spending allowance: this includes only the payments you added. Remember groceries, transport and other everyday costs.</p>
 <h3 class="timeline-heading">What happens, and when</h3><p class="small">Your starting balance, payment days and the end of your plan.</p><div class="timeline-label"><span>DATE &amp; PAYMENT</span><span>MONEY LEFT</span></div><div id="days"></div>
 <div id="chart" hidden aria-hidden="true"></div>
-<p class="small assumption-note">Payments on the same day are combined. This does not model the order they clear your account.</p></div>
+<p class="small assumption-note">Daily totals; timing of payments within the same day isn’t modeled. A payment can arrive too late to cover an earlier bill, even when the day ends above $0.</p></div>
 <details class="panel scenario"><summary>What if my income arrives late?</summary><div class="scenario-body"><p>Choose one paycheck or all income, then move the slider. The result above updates; your saved payment dates stay unchanged.</p><label for="delay" class="range-label">Delay income by <strong id="delayLabel">0 days</strong></label><input id="delay" type="range" min="0" max="14" value="0"><div class="range-ends" aria-hidden="true"><span>On time</span><span>14 days late</span></div><p class="small">Set back to 0 days to return to your original plan.</p></div></details>
 <p class="small disclaimer">An estimate, not financial advice. Future income is not guaranteed. This app does not access bank accounts or move money.</p>
 </section></div>
