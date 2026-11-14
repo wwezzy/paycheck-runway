@@ -59,3 +59,18 @@ test('monthly missing first date cannot forecast, persisted frequency preserved'
  const raw={items:[{label:'rent',amount:1800,date:null,type:'expense',frequency:'monthly'}]};
  const draft=validateParsed(raw,{allowMissingDate:true});assert.equal(draft[0].frequency,'monthly');assert.throws(()=>forecast(0,draft,'2026-11-14'));
 });
+test('blank opening balance is unknown, while explicit zero is valid',()=>{
+ for(const value of ['',null,undefined,'   '])assert.throws(()=>forecast(value,[],'2026-11-14'));
+ assert.equal(forecast(0,[],'2026-11-14')[0].balance,0);
+});
+test('delay one income occurrence without shifting later recurring payments or expenses',()=>{
+ const items=[{label:'Pay',type:'income',amount:100,date:'2026-11-14',frequency:'weekly'},{label:'Bill',type:'expense',amount:20,date:'2026-11-15'}];
+ const r=forecast(0,items,'2026-11-14',15,3,'0:2026-11-14');
+ assert.deepEqual(r.flatMap(x=>x.events).filter(x=>x.type==='income').map(x=>x.date),['2026-11-17','2026-11-21','2026-11-28']);
+ assert.equal(r[1].balance,-20);
+});
+test('selected delayed occurrence outside horizon is excluded, all-income default remains',()=>{
+ const item={label:'Pay',type:'income',amount:100,date:'2026-11-14',frequency:'weekly'};
+ assert.equal(forecast(0,[item],'2026-11-14',7,10,'0:2026-11-14').at(-1).balance,0);
+ assert.deepEqual(forecast(0,[item],'2026-11-14',10,2).flatMap(x=>x.events).map(x=>x.date),['2026-11-16','2026-11-23']);
+});
