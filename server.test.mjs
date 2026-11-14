@@ -12,7 +12,17 @@ test('HTTP serves every browser module including persistence', async () => {
       assert.equal(r.status,200,path);
       if(path.endsWith('.js'))assert.match(r.headers.get('content-type'),/javascript/);
       assert.ok((await r.text()).length>0);
+      assert.match(r.headers.get('content-security-policy'),/frame-ancestors 'none'/);
+      assert.equal(r.headers.get('x-content-type-options'),'nosniff');
     }
     assert.equal((await fetch('http://127.0.0.1:31947/not-public')).status,404);
+    const parse=(body,headers={})=>fetch('http://127.0.0.1:31947/api/parse',{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(body)});
+    assert.equal((await parse({fictionalOnly:false})).status,400);
+    assert.equal((await parse({fictionalOnly:true,text:' ',today:'2026-11-14'})).status,400);
+    assert.equal((await parse({fictionalOnly:true,text:'synthetic example',today:'2026-11-14'},{origin:'https://other.example'})).status,403);
+    assert.equal((await parse({fictionalOnly:true,text:'x'.repeat(8001),today:'2026-11-14'})).status,413);
+    assert.equal((await parse({}, {'content-type':'text/plain'})).status,415);
+    assert.equal((await parse({}, {'sec-fetch-site':'cross-site'})).status,403);
+
   } finally { child.kill(); await once(child,'exit'); }
 });
