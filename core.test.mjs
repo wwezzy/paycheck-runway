@@ -20,3 +20,18 @@ test('legacy one-off records stay one-off and unsupported recurrence rejected',(
  const x={label:'Pay',type:'income',amount:100,date:'2026-11-14'};
  assert.equal(forecast(0,[x],'2026-11-14').at(-1).balance,100);assert.throws(()=>validateParsed({items:[{...x,frequency:'monthly'}]}));
 });
+test('US date display is unambiguous and timezone-independent',async()=>{
+ const {displayDate}=await import('./public/core.js');
+ assert.equal(displayDate('2026-11-14'),'Nov 14, 2026');
+ assert.equal(displayDate('2026-03-08'),'Mar 8, 2026');
+ assert.equal(displayDate('2026-02-30'),'Choose a date');
+});
+test('today uses device calendar fields rather than UTC date or locale serialization',async()=>{
+ const {localToday}=await import('./public/core.js');
+ const fake={getFullYear:()=>2026,getMonth:()=>0,getDate:()=>2};
+ assert.equal(localToday(fake),'2026-01-02');
+});
+test('weekly recurrence remains seven calendar days across US DST transition',()=>{
+ const r=forecast(0,[{label:'Pay',type:'income',amount:100,date:'2026-03-01',frequency:'weekly'}],'2026-03-01',22);
+ assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2026-03-01','2026-03-08','2026-03-15','2026-03-22']);
+});
