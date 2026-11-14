@@ -2,12 +2,12 @@ export function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.t
 export function cents(n){if(!Number.isFinite(Number(n))||Math.abs(Number(n))>1e8)throw Error('Enter a valid amount');return Math.round(Number(n)*100)}
 export function addDays(day,n){const d=new Date(day+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 
-export function validateParsed(raw,{allowMissingDate=false}={}){
+export function validateParsed(raw,{allowMissingDate=false,allowUnclearAmount=false}={}){
  if(!raw||!Array.isArray(raw.items)||raw.items.length>40)throw Error('Invalid AI response');
  return raw.items.map(x=>{
   const frequency=x.frequency||'once';
-  if((!validDate(x.date)&&!(allowMissingDate&&(x.date===null||x.date==='')))||!['income','expense'].includes(x.type)||typeof x.label!=='string'||!x.label.trim()||cents(x.amount)<=0||!['once','weekly'].includes(frequency))throw Error('Check amount, date and frequency. Unsupported schedules must be entered manually.');
-  return {label:x.label.slice(0,80),type:x.type,date:x.date||'',amount:cents(x.amount)/100,...(frequency==='weekly'?{frequency}: {})};
+  if((!validDate(x.date)&&!(allowMissingDate&&(x.date===null||x.date==='')))||!['income','expense'].includes(x.type)||typeof x.label!=='string'||!x.label.trim()||(!(allowUnclearAmount&&x.amount===null)&&cents(x.amount)<=0)||!['once','weekly'].includes(frequency))throw Error('Check amount, date and frequency. Unsupported schedules must be entered manually.');
+  return {label:x.label.slice(0,80),type:x.type,date:x.date||'',amount:x.amount===null&&allowUnclearAmount?null:cents(x.amount)/100,...(allowUnclearAmount&&typeof x.question==='string'&&x.question.trim()?{question:x.question.slice(0,240)}:{}),...(frequency==='weekly'?{frequency}: {})};
  });
 }
 export function scheduledItems(items,start,days=30,delay=0){
