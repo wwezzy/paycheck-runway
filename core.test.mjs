@@ -49,7 +49,7 @@ test('monthly clamps short months without drifting original anchor',()=>{
 });
 test('monthly leap year and delayed income preserve original monthly anchor',()=>{
  const r=forecast(0,[{label:'pay',type:'income',amount:100,date:'2024-01-31',frequency:'monthly'}],'2024-02-01',65,2);
- assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2024-02-02','2024-03-02','2024-04-02']);
+ assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2024-03-02','2024-04-02']);
 });
 test('biweekly means 14 days, not two dates per month',()=>{
  const r=forecast(0,[{label:'pay',type:'income',amount:100,date:'2026-11-01',frequency:'biweekly'}],'2026-11-01',30);
@@ -73,4 +73,27 @@ test('selected delayed occurrence outside horizon is excluded, all-income defaul
  const item={label:'Pay',type:'income',amount:100,date:'2026-11-14',frequency:'weekly'};
  assert.equal(forecast(0,[item],'2026-11-14',7,10,'0:2026-11-14').at(-1).balance,0);
  assert.deepEqual(forecast(0,[item],'2026-11-14',10,2).flatMap(x=>x.events).map(x=>x.date),['2026-11-16','2026-11-23']);
+});
+test('demo baseline stays positive; delaying only its paycheck 3 days creates shortfall',async()=>{
+ const {samplePlan}=await import('./public/core.js'),start='2026-11-14',p=samplePlan(start);
+ const base=forecast(p.balance,p.items,start),delayed=forecast(p.balance,p.items,start,30,3,'2:'+addDays(start,3));
+ assert.equal(Math.min(...base.map(x=>x.balance)),200);
+ assert.equal(base.find(x=>x.balance<0),undefined);
+ assert.equal(Math.min(...delayed.map(x=>x.balance)),-50);
+ assert.equal(delayed.find(x=>x.balance<0).date,addDays(start,4));
+ assert.equal(delayed.at(-1).balance,base.at(-1).balance);
+});
+test('all-income delay never imports historical paychecks already reflected in starting balance',()=>{
+ const items=[{label:'Pay',amount:100,type:'income',frequency:'weekly',date:'2026-11-07'}];
+ const rows=forecast(500,items,'2026-11-14',30,7);
+ assert.deepEqual(rows.flatMap(x=>x.events).map(x=>x.date),['2026-11-21','2026-11-28','2026-12-05','2026-12-12']);
+ assert.equal(rows[0].balance,500);assert.equal(rows.at(-1).balance,900);
+ const pastSelected=forecast(500,items,'2026-11-14',30,7,'0:2026-11-07');
+ assert.equal(pastSelected[0].balance,600); // Only the current Nov14 payment, never Nov7.
+ assert.equal(pastSelected.flatMap(x=>x.events).length,5);
+});
+test('delays keep inclusive final horizon date, exclude next day and never import past one-offs',()=>{
+ const items=[{label:'Past',type:'income',amount:999,date:'2026-11-13'},{label:'Future',type:'income',amount:100,date:'2026-11-14'}];
+ assert.equal(forecast(0,items,'2026-11-14',3,2).at(-1).balance,100);
+ assert.equal(forecast(0,items,'2026-11-14',3,3).at(-1).balance,0);
 });
