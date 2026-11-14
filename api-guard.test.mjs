@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {demoBudget} from './api-guard.mjs';
+test('shared concurrency bounded and release idempotent',()=>{const b=demoBudget({maxConcurrent:1});const a=b.acquire();assert.equal(a.ok,true);assert.equal(b.acquire().ok,false);a.release();a.release();assert.equal(b.acquire().ok,true)});
+test('rolling minute budget resets, failed admission does not spend daily budget',()=>{let now=0;const b=demoBudget({perMinute:1,perDay:2,clock:()=>now});b.acquire().release();assert.equal(b.acquire().ok,false);now=60000;b.acquire().release();now=120000;assert.match(b.acquire().error,/daily/)});
+test('UTC daily budget resets without negative active counts',()=>{let now=0;const b=demoBudget({perDay:1,clock:()=>now});b.acquire().release();now=60001;assert.equal(b.acquire().ok,false);now=86400000;assert.equal(b.acquire().ok,true)});
