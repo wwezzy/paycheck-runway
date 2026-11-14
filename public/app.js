@@ -1,10 +1,10 @@
 import {planStore} from './storage.js';
 import {speechSnapshot} from './speech.js';
-import {forecast,addDays,validateParsed,scheduledItems,localToday,displayDate,samplePlan,validDate} from './core.js';
-const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n),today=localToday();let items=[],draft=[],recognition,parseGeneration=0;
+import {forecast,addDays,validateParsed,scheduledItems,localToday,displayDate,samplePlan,validDate,savedPlanWarning} from './core.js';
+const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n),today=localToday();let items=[],draft=[],recognition,parseGeneration=0,loadedSavedPlan=false;
 const persistence=planStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
 function storageNotice(message){$('storageStatus').textContent=message;$('storageStatus').hidden=!message}
-$('balance').value='';$('start').value=today;$('date').value=today;try{const saved=persistence.load();if(saved){items=saved.items;$('balance').value=saved.balance;$('start').value=saved.start}}catch(e){storageNotice(e.message)}
+$('balance').value='';$('start').value=today;$('date').value=today;try{const saved=persistence.load();if(saved){loadedSavedPlan=true;items=saved.items;$('balance').value=saved.balance;$('start').value=saved.start}}catch(e){storageNotice(e.message)}
 
 function el(tag,text,cls){const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e}
 function dateHint(input){
@@ -26,6 +26,7 @@ function clearForecast(message){
  if($('planSummary'))$('planSummary').textContent=message;
 }
 function render(){syncStart();showPlanError('');
+const savedNotice=$('savedPlanNotice');if(savedNotice){const message=loadedSavedPlan?savedPlanWarning($('start').value,localToday()):'';savedNotice.textContent=message;savedNotice.hidden=!message;}
 if(!validDate($('start').value)){const message='Choose a start date to see your forecast.';showPlanError(message);clearForecast(message);return}
 if(!$('balance').value.trim()){comparison.textContent='';if($('planSummary'))$('planSummary').textContent='Enter your available balance to see a forecast. No starting amount is assumed.';
  $('lowest').textContent='—';$('lowest').classList.remove('negative');$('shortfall').textContent='Enter your starting balance';$('chart').replaceChildren();$('days').replaceChildren();$('items').replaceChildren();
@@ -48,8 +49,8 @@ for(const [value,text] of [['once','Once'],['weekly','Every week'],['biweekly','
 frequencyLabel.append(frequencySelect);$('manual').insertBefore(frequencyLabel,$('manual').querySelector('button'));
 $('manual').onsubmit=e=>{e.preventDefault();try{const x=validateParsed({items:[{label:$('label').value,type:$('type').value,amount:Number($('amount').value),date:$('date').value,frequency:frequencySelect.value}]});items.push(...x);$('label').value='';$('amount').value='';render()}catch(e){showPlanError('Item not added: '+e.message);clearForecast('This item was not added. Correct its amount, date and description, then try again.')}};
 $('manual').addEventListener('invalid',()=>{showPlanError('Item not added. Check the highlighted field: enter a description, a positive amount and a valid date.');clearForecast('Correct the highlighted field to continue. Existing saved items are unchanged.')},true);
-$('demo').onclick=()=>{if(items.length&&!confirm('Replace your current plan with fictional sample data?'))return;try{const d=$('start').value||today,example=samplePlan(d);$('start').value=d;items=example.items;$('balance').value=example.balance;parseGeneration++;draft=[];$('review').hidden=true;$('parse').disabled=false;$('delay').value=0;render();delayChoice.value='2:'+addDays(d,3);render()}catch(e){showPlanError(e.message);clearForecast('Choose a valid start date, then load the example.')}};
-$('clear').onclick=()=>{if(!confirm('Delete the plan saved in this browser?'))return;try{persistence.clear()}catch{storageNotice('Could not clear browser storage. Your saved plan was not changed.');return}parseGeneration++;$('parse').disabled=false;items=[];$('balance').value='';draft=[];$('review').hidden=true;storageNotice('');render()};
+$('demo').onclick=()=>{if(items.length&&!confirm('Replace your current plan with fictional sample data?'))return;try{const d=$('start').value||today,example=samplePlan(d);$('start').value=d;loadedSavedPlan=false;items=example.items;$('balance').value=example.balance;parseGeneration++;draft=[];$('review').hidden=true;$('parse').disabled=false;$('delay').value=0;render();delayChoice.value='2:'+addDays(d,3);render()}catch(e){showPlanError(e.message);clearForecast('Choose a valid start date, then load the example.')}};
+$('clear').onclick=()=>{if(!confirm('Delete the plan saved in this browser?'))return;try{persistence.clear()}catch{storageNotice('Could not clear browser storage. Your saved plan was not changed.');return}parseGeneration++;loadedSavedPlan=false;$('parse').disabled=false;items=[];$('balance').value='';draft=[];$('review').hidden=true;storageNotice('');render()};
 $('parse').onclick=async()=>{if(!$('consent').checked){$('status').textContent='Confirm fictional-only data before using AI.';return}if(!$('speech').value.trim())return;const requestGeneration=++parseGeneration;draft=[];$('review').hidden=true;$('parse').disabled=true;$('status').textContent='Extracting. Nothing will be saved until you confirm.';try{const res=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('speech').value,today:$('start').value,fictionalOnly:true})});const data=await res.json();if(requestGeneration!==parseGeneration)return;if(!res.ok)throw Error(data.error);draft=validateParsed(data,{allowMissingDate:true,allowUnclearAmount:true});if(!draft.length)throw Error('No complete transactions found. Include an amount, type and date.');$('drafts').replaceChildren();draft.forEach(x=>{
  const row=el('div',null,'item'),info=el('div',x.label+' · '+x.type);
  const amountLabel=el('label',x.question||'Amount ($)'),amount=document.createElement('input');amount.type='number';amount.min='0.01';amount.step='0.01';amount.required=true;amount.value=x.amount===null?'':x.amount;amount.oninput=()=>{x.amount=amount.value.trim()===''?null:Number(amount.value);updateDraft()};amountLabel.append(amount);info.append(amountLabel);
