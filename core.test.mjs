@@ -35,3 +35,11 @@ test('weekly recurrence remains seven calendar days across US DST transition',()
  const r=forecast(0,[{label:'Pay',type:'income',amount:100,date:'2026-03-01',frequency:'weekly'}],'2026-03-01',22);
  assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2026-03-01','2026-03-08','2026-03-15','2026-03-22']);
 });
+test('ambiguous spoken amount remains unresolved until user supplies it',()=>{
+ const raw={items:[{label:'Insurance',type:'expense',date:null,amount:null,frequency:'once',question:'Did you mean $150 or $650?'}]};
+ const draft=validateParsed(raw,{allowMissingDate:true,allowUnclearAmount:true});
+ assert.equal(draft[0].amount,null);assert.equal(draft[0].question,'Did you mean $150 or $650?');
+ assert.throws(()=>validateParsed({items:draft}));
+ draft[0].amount=650;draft[0].date='2026-11-20';
+ const confirmed=validateParsed({items:draft});assert.equal(confirmed[0].amount,650);assert.equal(confirmed[0].question,undefined);
+});
