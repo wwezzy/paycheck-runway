@@ -1,4 +1,5 @@
 import {planStore} from './storage.js';
+import {speechSnapshot} from './speech.js';
 import {forecast,addDays,validateParsed} from './core.js';
 const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n),today=new Date().toLocaleDateString('en-CA');let items=[],draft=[],recognition;
 const persistence=planStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
@@ -13,5 +14,31 @@ $('demo').onclick=()=>{if(items.length&&!confirm('Replace your current plan with
 $('clear').onclick=()=>{if(!confirm('Delete the plan saved in this browser?'))return;try{persistence.clear()}catch{storageNotice('Could not clear browser storage. Your saved plan was not changed.');return}items=[];$('balance').value=0;draft=[];$('review').hidden=true;storageNotice('');render()};
 $('parse').onclick=async()=>{if(!$('consent').checked){$('status').textContent='Confirm fictional-only data before using AI.';return}if(!$('speech').value.trim())return;draft=[];$('review').hidden=true;$('parse').disabled=true;$('status').textContent='Extracting. Nothing will be saved until you confirm.';try{const res=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:$('speech').value,today:$('start').value,fictionalOnly:true})});const data=await res.json();if(!res.ok)throw Error(data.error);draft=validateParsed(data);if(!draft.length)throw Error('No complete transactions found. Include an amount, type and date.');$('drafts').replaceChildren();draft.forEach(x=>{const row=el('div',`${x.label} · ${x.type} · ${money(x.amount)} · ${x.date}`,'item');$('drafts').append(row)});$('review').hidden=false;$('status').textContent='Check the draft below. Discard and edit the transcript if anything is incorrect.'}catch(e){$('status').textContent=e.message}finally{$('parse').disabled=false}};
 $('confirm').onclick=()=>{items.push(...draft);draft=[];$('review').hidden=true;$('speech').value='';render();$('status').textContent='Confirmed transactions added.'};$('cancel').onclick=()=>{draft=[];$('review').hidden=true;$('status').textContent='Draft discarded. Edit the transcript or enter items manually.'};
-$('mic').onclick=()=>{if(recognition){recognition.stop();return}if(!$('consent').checked){$('status').textContent='Confirm fictional-only data before starting the microphone.';return}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('status').textContent='Voice is not supported in this browser. Type your example instead.';return}recognition=new SR();const session=recognition;let stopTimer;recognition.lang='en-US';recognition.continuous=true;recognition.interimResults=false;recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)$('speech').value+=e.results[i][0].transcript+' '};recognition.onerror=e=>{$('status').textContent='Voice unavailable: '+e.error+'. You can type instead.'};recognition.onend=()=>{clearTimeout(stopTimer);if(recognition===session)recognition=null;$('mic').textContent='🎙 Start voice input'};try{recognition.start();$('mic').textContent='■ Stop listening';$('status').textContent='Listening to your fictional example. Stop, review the text, then choose Review with AI.';stopTimer=setTimeout(()=>{if(recognition===session)session.stop()},60000)}catch{recognition=null;$('status').textContent='Could not start microphone.'}};
+$('mic').onclick=()=>{
+  if(recognition){recognition.stop();return}
+  if(!$('consent').checked){$('status').textContent='Confirm fictional-only data before starting the microphone.';return}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){$('status').textContent='Voice is not supported in this browser. Type your example instead.';return}
+  const session=new SR();recognition=session;
+  const prefix=$('speech').value.trim();let stopTimer,committed=prefix,hasInterim=false,failed=false;
+  session.lang='en-US';session.continuous=true;session.interimResults=true;
+  session.onresult=e=>{
+    if(recognition!==session)return;
+    const snapshot=speechSnapshot(e.results,prefix);
+    committed=snapshot.committed;hasInterim=snapshot.hasInterim;
+    $('speech').value=snapshot.preview;
+  };
+  session.onerror=e=>{if(recognition!==session)return;failed=true;$('status').textContent='Voice unavailable: '+e.error+'. You can type instead.'};
+  session.onend=()=>{
+    clearTimeout(stopTimer);if(recognition!==session)return;
+    recognition=null;$('speech').value=committed;$('speech').readOnly=false;$('parse').disabled=false;
+    $('mic').textContent='🎙 Start voice input';
+    if(!failed)$('status').textContent=hasInterim?'Recording stopped. The unfinished phrase was not added. Review the text and type any missing words.':'Recording stopped. Review the text before extracting transactions. Include exact dates.';
+  };
+  try{
+    session.start();$('speech').readOnly=true;$('parse').disabled=true;$('mic').textContent='■ Stop listening';
+    $('status').textContent='Listening. Live words may change until finalized. Stop to review. Nothing is sent to the AI until you choose extraction.';
+    stopTimer=setTimeout(()=>{if(recognition===session)session.stop()},60000);
+  }catch{recognition=null;$('speech').readOnly=false;$('parse').disabled=false;$('status').textContent='Could not start microphone. You can type instead.'}
+};
 fetch('/api/status').then(r=>r.json()).then(x=>$('status').textContent=x.configured?'AI connection configured; fictional data only.':'AI key not connected yet. The manual calculator and example are working.').catch(()=>$('status').textContent='Server unavailable.');render();
