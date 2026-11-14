@@ -9,8 +9,8 @@ No signup is needed. Use fictional information throughout the demonstration. The
 
 ## Core demonstration
 
-1. Open **Try an example** to load fictional inputs into the actual calculation engine. Explain the opening balance, expenses and expected payday.
-2. Read the forecast and identify a projected shortage. Open the dated detail to show which transactions drive it.
+1. Start with **Try an example**, not the introductory illustration. It loads fictional inputs into the actual calculation engine. Explain the opening balance, expenses and expected payday.
+2. Read **Lowest balance** and **First day below $0**. Open **See dates and balances** and compare those dates with **Your scheduled items**. This is the clearest way to explain the result without relying on the chart. The introductory illustration is separate from the user’s calculated forecast.
 3. Choose one expected paycheck in the delay selector and move it a few days. Compare the baseline and delayed lowest balances. Only that occurrence moves; later recurring paydays stay put. The default “all income” choice is a different scenario. Explain that neither changes the saved plan or makes an actual payment instruction.
 4. Add a fictional expense, remove it, and reload to show browser-local persistence. Do not clear an existing plan without the owner's intention.
 
