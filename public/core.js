@@ -20,8 +20,8 @@ export function addMonthsClamped(day,months){
 export function scheduledItems(items,start,days=30,delay=0,delayTarget=null){
  if(!validDate(start)||!Number.isInteger(days)||days<1||days>366||!Number.isInteger(delay)||delay<0||delay>365)throw Error('Invalid forecast window');
  const end=addDays(start,days-1),events=[];
- if(delayTarget!==null){
-  return scheduledItems(items,start,days,0).map(x=>x.occurrenceId===delayTarget&&x.type==='income'?{...x,date:addDays(x.date,delay)}:x).filter(x=>x.date<=end);
+ if(delay>0||delayTarget!==null){
+  return scheduledItems(items,start,days,0).map(x=>x.type==='income'&&(delayTarget===null||x.occurrenceId===delayTarget)?{...x,date:addDays(x.date,delay)}:x).filter(x=>x.date<=end);
  }
  for(const [index,item] of items.entries()){
   const x=validateParsed({items:[item]})[0],shift=x.type==='income'?delay:0;
@@ -52,4 +52,14 @@ export function localToday(now=new Date()){
 export function displayDate(day){
  if(!validDate(day))return 'Choose a date';
  return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(day+'T00:00:00Z'));
+}
+
+// Fictional demonstration: on-time income covers bills; a 3-day delay does not.
+export function samplePlan(start){
+ if(!validDate(start))throw Error('Choose a valid plan start date');
+ return {balance:1000,items:[
+  {label:'Rent',amount:800,type:'expense',date:addDays(start,2)},
+  {label:'Insurance',amount:250,type:'expense',date:addDays(start,4)},
+  {label:'Paycheck',amount:600,type:'income',date:addDays(start,3)}
+ ]};
 }
