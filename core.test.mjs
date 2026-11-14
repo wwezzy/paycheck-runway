@@ -97,3 +97,13 @@ test('delays keep inclusive final horizon date, exclude next day and never impor
  assert.equal(forecast(0,items,'2026-11-14',3,2).at(-1).balance,100);
  assert.equal(forecast(0,items,'2026-11-14',3,3).at(-1).balance,0);
 });
+
+test('saved plan warning uses local calendar comparison without changing data',async()=>{
+ const {savedPlanWarning}=await import('./public/core.js');
+ const saved={start:'2026-11-14',balance:123,items:[]},snapshot=JSON.stringify(saved);
+ assert.match(savedPlanWarning(saved.start,'2026-11-15'),/Nov 14, 2026/);
+ assert.equal(savedPlanWarning(saved.start,'2026-11-14'),'');
+ assert.equal(savedPlanWarning(saved.start,'2026-11-13'),'');
+ assert.equal(savedPlanWarning('','2026-11-15'),'');
+ assert.equal(JSON.stringify(saved),snapshot);
+});
