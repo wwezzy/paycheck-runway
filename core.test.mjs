@@ -18,7 +18,7 @@ test('weekly starts before forecast and delayed income shift consistently',()=>{
 });
 test('legacy one-off records stay one-off and unsupported recurrence rejected',()=>{
  const x={label:'Pay',type:'income',amount:100,date:'2026-11-14'};
- assert.equal(forecast(0,[x],'2026-11-14').at(-1).balance,100);assert.throws(()=>validateParsed({items:[{...x,frequency:'monthly'}]}));
+ assert.equal(forecast(0,[x],'2026-11-14').at(-1).balance,100);assert.throws(()=>validateParsed({items:[{...x,frequency:'yearly'}]}));
 });
 test('US date display is unambiguous and timezone-independent',async()=>{
  const {displayDate}=await import('./public/core.js');
@@ -42,4 +42,20 @@ test('ambiguous spoken amount remains unresolved until user supplies it',()=>{
  assert.throws(()=>validateParsed({items:draft}));
  draft[0].amount=650;draft[0].date='2026-11-20';
  const confirmed=validateParsed({items:draft});assert.equal(confirmed[0].amount,650);assert.equal(confirmed[0].question,undefined);
+});
+test('monthly clamps short months without drifting original anchor',()=>{
+ const r=forecast(0,[{label:'rent',type:'expense',amount:100,date:'2026-01-31',frequency:'monthly'}],'2026-01-31',90);
+ assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2026-01-31','2026-02-28','2026-03-31','2026-04-30']);
+});
+test('monthly leap year and delayed income preserve original monthly anchor',()=>{
+ const r=forecast(0,[{label:'pay',type:'income',amount:100,date:'2024-01-31',frequency:'monthly'}],'2024-02-01',65,2);
+ assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2024-02-02','2024-03-02','2024-04-02']);
+});
+test('biweekly means 14 days, not two dates per month',()=>{
+ const r=forecast(0,[{label:'pay',type:'income',amount:100,date:'2026-11-01',frequency:'biweekly'}],'2026-11-01',30);
+ assert.deepEqual(r.flatMap(x=>x.events).map(x=>x.date),['2026-11-01','2026-11-15','2026-11-29']);
+});
+test('monthly missing first date cannot forecast, persisted frequency preserved',()=>{
+ const raw={items:[{label:'rent',amount:1800,date:null,type:'expense',frequency:'monthly'}]};
+ const draft=validateParsed(raw,{allowMissingDate:true});assert.equal(draft[0].frequency,'monthly');assert.throws(()=>forecast(0,draft,'2026-11-14'));
 });
