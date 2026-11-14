@@ -17,28 +17,31 @@ export function addMonthsClamped(day,months){
  const last=new Date(0);last.setUTCFullYear(target.getUTCFullYear(),target.getUTCMonth()+1,0);
  target.setUTCDate(Math.min(d,last.getUTCDate()));return target.toISOString().slice(0,10);
 }
-export function scheduledItems(items,start,days=30,delay=0){
+export function scheduledItems(items,start,days=30,delay=0,delayTarget=null){
  if(!validDate(start)||!Number.isInteger(days)||days<1||days>366||!Number.isInteger(delay)||delay<0||delay>365)throw Error('Invalid forecast window');
  const end=addDays(start,days-1),events=[];
- for(const item of items){
+ if(delayTarget!==null){
+  return scheduledItems(items,start,days,0).map(x=>x.occurrenceId===delayTarget&&x.type==='income'?{...x,date:addDays(x.date,delay)}:x).filter(x=>x.date<=end);
+ }
+ for(const [index,item] of items.entries()){
   const x=validateParsed({items:[item]})[0],shift=x.type==='income'?delay:0;
   if(x.frequency==='monthly'){
    const earliest=addDays(start,-shift),[sy,sm]=earliest.split('-').map(Number),[ay,am]=x.date.split('-').map(Number);
    let month=Math.max(0,(sy-ay)*12+sm-am-1);
-   for(;;month++){const date=addDays(addMonthsClamped(x.date,month),shift);if(date>end)break;if(date>=start)events.push({...x,date})}
+   for(;;month++){const date=addDays(addMonthsClamped(x.date,month),shift);if(date>end)break;if(date>=start)events.push({...x,date,occurrenceId:index+':'+addDays(date,-shift)})}
   }else{
    let date=addDays(x.date,shift);
    const step=x.frequency==='weekly'?7:x.frequency==='biweekly'?14:0;
    if(step){
     if(date<start){const gap=Math.round((Date.parse(start)-Date.parse(date))/86400000);date=addDays(date,Math.ceil(gap/step)*step)}
-    for(;date<=end;date=addDays(date,step))events.push({...x,date});
-   }else if(date>=start&&date<=end)events.push({...x,date});
+    for(;date<=end;date=addDays(date,step))events.push({...x,date,occurrenceId:index+':'+addDays(date,-shift)});
+   }else if(date>=start&&date<=end)events.push({...x,date,occurrenceId:index+':'+addDays(date,-shift)});
   }
  }
  return events;
 }
-export function forecast(balance,items,start,days=30,delay=0){
- let total=cents(balance);const safe=scheduledItems(items,start,days,delay);
+export function forecast(balance,items,start,days=30,delay=0,delayTarget=null){
+ if(balance===null||balance===undefined||String(balance).trim()==='')throw Error('Enter a starting balance');let total=cents(balance);const safe=scheduledItems(items,start,days,delay,delayTarget);
  return Array.from({length:days},(_,i)=>{const date=addDays(start,i);const events=safe.filter(x=>x.date===date);total+=events.reduce((s,x)=>s+cents(x.amount)*(x.type==='income'?1:-1),0);return {date,balance:total/100,events}});
 }
 
