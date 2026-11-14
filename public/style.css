@@ -7,3 +7,5 @@
 
 /* Keep supporting copy readable rather than decorative. */
 .privacy-note,.assumption-note,.disclaimer{font-size:12px}.metrics small{font-size:11px}.range-ends,.chart-labels{font-size:11px}.timeline-label{font-size:10px}.workspace-heading p{font-size:12px}
+
+.storage-warning{padding:16px 20px;border:1px solid #b86433;background:#fff2df;color:#61320e;border-radius:12px;font-size:15px;line-height:1.6}.storage-warning[hidden]{display:none}
