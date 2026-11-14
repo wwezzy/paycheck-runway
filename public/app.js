@@ -1,6 +1,6 @@
 import {planStore} from './storage.js';
 import {speechSnapshot} from './speech.js';
-import {forecast,addDays,validateParsed,scheduledItems,localToday,displayDate,samplePlan} from './core.js';
+import {forecast,addDays,validateParsed,scheduledItems,localToday,displayDate,samplePlan,validDate} from './core.js';
 const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n),today=localToday();let items=[],draft=[],recognition,parseGeneration=0;
 const persistence=planStore({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value),removeItem:key=>localStorage.removeItem(key)});
 function storageNotice(message){$('storageStatus').textContent=message;$('storageStatus').hidden=!message}
@@ -26,6 +26,7 @@ function clearForecast(message){
  if($('planSummary'))$('planSummary').textContent=message;
 }
 function render(){syncStart();showPlanError('');
+if(!validDate($('start').value)){const message='Choose a start date to see your forecast.';showPlanError(message);clearForecast(message);return}
 if(!$('balance').value.trim()){comparison.textContent='';if($('planSummary'))$('planSummary').textContent='Enter your available balance to see a forecast. No starting amount is assumed.';
  $('lowest').textContent='—';$('lowest').classList.remove('negative');$('shortfall').textContent='Enter your starting balance';$('chart').replaceChildren();$('days').replaceChildren();$('items').replaceChildren();
  items.forEach((x,i)=>{const row=el('div',null,'item');row.append(el('span',x.label+' · '+displayDate(x.date)+' · '+money(x.amount)));const remove=el('button','Remove');remove.onclick=()=>{items.splice(i,1);render()};row.append(remove);$('items').append(row)});
