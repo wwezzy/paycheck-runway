@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {planStore} from './public/storage.js';
+import {planStore,validatePlan} from './public/storage.js';
 import {validateParsed} from './public/core.js';
 const item={label:'Fictional bill',type:'expense',amount:1,date:'2026-11-14'};
 const plan=n=>({items:Array.from({length:n},()=>({...item})),balance:'1000',start:'2026-11-14'});
@@ -25,4 +25,8 @@ test('storage access and quota failures are surfaced rather than silently discar
  const store=planStore({getItem(){throw Error('denied')},setItem(){throw Error('quota')},removeItem(){throw Error('denied')}});
  assert.throws(()=>store.load());assert.throws(()=>store.save(plan(1)));assert.throws(()=>store.clear());
  const s=planStore({getItem(){return null},setItem(){throw Error('quota')}});assert.equal(s.load(),null);assert.throws(()=>s.save(plan(1)),/quota/);
+});
+test('weekly rules and existing one-offs survive storage validation',()=>{
+ const saved={start:'2026-11-14',balance:10,items:[{label:'Salary',type:'income',date:'2026-11-16',amount:1000,frequency:'weekly'},{label:'Rent',type:'expense',date:'2026-11-20',amount:100}]};
+ assert.deepEqual(validatePlan(saved),saved);
 });
