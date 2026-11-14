@@ -51,3 +51,5 @@ label>small{display:block;font-size:12px;line-height:1.5;font-weight:400;margin-
 @media(max-width:1100px){.intro{gap:24px}.payday-preview{width:330px}.intro h1{font-size:38px}}
 @media(max-width:780px){.intro{display:block;padding:30px 0}.payday-preview{width:100%;max-width:460px;margin-top:25px}.intro-copy br{display:none}.payday-preview summary{padding:18px 22px 0}.preview-number{margin-top:12px}.preview-chart{height:58px}.preview-axis{margin-bottom:12px}}
 @media(prefers-reduced-motion:reduce){.preview-arrow{transition:none}}
+
+.coverage-note{font-size:13px;line-height:1.6;color:#53644d;background:#eef2e8;border-left:3px solid #9daf83;padding:12px 15px;margin:0 0 16px;border-radius:0 8px 8px 0}
