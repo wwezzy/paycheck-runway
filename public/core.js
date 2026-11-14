@@ -63,3 +63,8 @@ export function samplePlan(start){
   {label:'Paycheck',amount:600,type:'income',date:addDays(start,3)}
  ]};
 }
+
+export function savedPlanWarning(start,today){
+ if(!validDate(start)||!validDate(today)||start>=today)return '';
+ return 'Saved plan starts '+displayDate(start)+'. Review the start date and available balance before reusing it. Dates and amounts have not been changed.';
+}
